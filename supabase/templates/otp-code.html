@@ -1,0 +1,16 @@
+<!doctype html>
+<html lang="fr">
+  <body style="margin:0;padding:32px 16px;background:#f7f2e8;font-family:Inter,Arial,sans-serif;color:#1c2931">
+    <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="max-width:440px;margin:0 auto;background:#fdf9f2;border:1px solid #d8ccbb;border-radius:20px">
+      <tr>
+        <td style="padding:32px 28px;text-align:center">
+          <p style="margin:0;font-size:20px;font-weight:800;color:#163d50">nestora</p>
+          <h1 style="margin:24px 0 8px;font-size:24px;line-height:1.25">Entre le code reçu</h1>
+          <p style="margin:0;color:#6b7680;font-size:15px;line-height:1.5">Voici ton code de vérification pour {{ .Email }}.</p>
+          <p style="margin:24px 0;font-size:36px;font-weight:800;letter-spacing:10px;color:#163d50">{{ .Token }}</p>
+          <p style="margin:0;color:#6b7680;font-size:13px;line-height:1.5">Ce code est valable 10 minutes. Si tu n’as rien demandé, ignore cet email.</p>
+        </td>
+      </tr>
+    </table>
+  </body>
+</html>

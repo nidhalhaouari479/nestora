@@ -1,0 +1,36 @@
+# Supabase CLI config (local `supabase start` / `supabase db reset`).
+# Values written as env(NAME) are read from the shell or from supabase/.env.
+# On a hosted project, copy the same values in the dashboard:
+#   Authentication → Emails → SMTP Settings, and Authentication → Emails → Templates.
+project_id = "nestora"
+
+[auth]
+site_url = "env(NEXT_PUBLIC_APP_URL)"
+additional_redirect_urls = ["env(BACKOFFICE_URL)"]
+
+[auth.email]
+enable_signup = true
+enable_confirmations = true
+# 6-digit code, valid 10 minutes, one email per minute per address.
+otp_length = 6
+otp_expiry = 600
+max_frequency = "60s"
+
+[auth.email.smtp]
+enabled = true
+host = "env(SMTP_HOST)"
+port = 587
+user = "env(SMTP_USER)"
+pass = "env(SMTP_PASS)"
+admin_email = "env(SMTP_SENDER_EMAIL)"
+sender_name = "env(SMTP_SENDER_NAME)"
+
+# New students receive "confirmation", returning students receive "magic_link".
+# Both templates send the 6-digit code instead of a link.
+[auth.email.template.confirmation]
+subject = "Ton code de vérification Nestora"
+content_path = "./supabase/templates/otp-code.html"
+
+[auth.email.template.magic_link]
+subject = "Ton code de connexion Nestora"
+content_path = "./supabase/templates/otp-code.html"
