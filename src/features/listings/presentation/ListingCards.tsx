@@ -1,8 +1,9 @@
 import Link from "next/link";
 import { ArrowRight, ArrowUpRight, Check, MapPin } from "lucide-react";
 import type { Listing } from "../domain/listing";
-import { availabilityLabel, formatPrice, mapsUrl, occupancyLabel } from "../application/listing-format";
+import { GENDER_LABELS, availabilityLabel, mapsUrl, occupancyLabel } from "../application/listing-format";
 import { FavoriteButton } from "./FavoriteButton";
+import { Price } from "./Price";
 
 function cover(listing: Listing) {
   return listing.photos[0] ?? { url: "/images/listings/studio-el-manar.jpg", alt: listing.title, position: "center" };
@@ -34,13 +35,14 @@ export function ListingCardLarge({ listing, showDetails = true }: { listing: Lis
               <a href={mapsUrl(listing)} target="_blank" rel="noreferrer" className="maps-link">Google Maps <ArrowUpRight size={12} aria-hidden="true" /></a>
             </div>
             <div className="listing-card-price">
-              <p><strong>{formatPrice(listing.priceTnd)}</strong><span>/ mois</span></p>
+              <p><Price listing={listing} /></p>
               {listing.confidenceScore !== null && <span className="score-pill">{listing.confidenceScore} / 100</span>}
             </div>
             {listing.serviceIncluded && <p className="listing-card-service">Service Nestora inclus</p>}
             <ul className="dot-list">
               <li>{listing.walkMinutes} min à pied</li>
               <li>{occupancyLabel(listing)}</li>
+              {listing.gender !== "all" && <li>{GENDER_LABELS[listing.gender]}</li>}
             </ul>
             <span className="hold-pill">{listing.holdSlotsAvailable} options sur {listing.holdSlotsTotal} disponibles</span>
             <Link href={`/logements/${listing.slug}`} className="primary-button listing-card-cta">Explorer ce logement <ArrowRight size={16} aria-hidden="true" /></Link>
@@ -63,7 +65,7 @@ export function ListingCardCompact({ listing }: { listing: Listing }) {
       <div className="compact-card-body">
         <h3>{listing.shortTitle}</h3>
         <p>{listing.walkMinutes} min du campus</p>
-        <p className="compact-card-price"><strong>{formatPrice(listing.priceTnd)}</strong><span>/ mois</span></p>
+        <p className="compact-card-price"><Price listing={listing} /></p>
         <Link href={`/logements/${listing.slug}`} className="pill-button">Explorer ce logement</Link>
       </div>
     </article>
@@ -81,7 +83,7 @@ export function FoyerCard({ listing }: { listing: Listing }) {
       <div className="foyer-card-body">
         <h3>{listing.shortTitle}</h3>
         <p>{listing.description}</p>
-        <strong>{formatPrice(listing.priceTnd)} / mois</strong>
+        <p className="foyer-card-price"><Price listing={listing} suffix={false} /></p>
         <Link href={`/logements/${listing.slug}`} className="pill-button large">Explorer ce logement <ArrowRight size={14} aria-hidden="true" /></Link>
       </div>
     </article>

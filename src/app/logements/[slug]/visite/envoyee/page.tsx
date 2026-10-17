@@ -6,8 +6,8 @@ import { getListingBySlug } from "@/features/listings/infrastructure/listings-re
 import { formatSlot, formatVisitDate } from "@/features/visits/application/visit-dates";
 
 const STEPS = [
-  { title: "Demande reçue", text: "Ton créneau est enregistré", state: "done" },
-  { title: "Confirmation du créneau", text: "Notre équipe coordonne la visite", state: "current" },
+  { title: "Demande reçue", text: "Tes disponibilités sont enregistrées", state: "done" },
+  { title: "Choix de la date", text: "Notre équipe retient une de tes dates", state: "current" },
   { title: "Visite confirmée", text: "Adresse et détails dans Mon logement", state: "todo" },
 ] as const;
 
@@ -18,6 +18,7 @@ export default async function VisitSentPage({ params, searchParams }: PageProps<
 
   const date = typeof query.date === "string" && /^\d{4}-\d{2}-\d{2}$/.test(query.date) ? query.date : null;
   const slot = typeof query.slot === "string" ? query.slot : null;
+  const count = typeof query.count === "string" ? Math.min(Math.max(Number.parseInt(query.count, 10) || 1, 1), 7) : 1;
   const photo = listing.photos[0];
 
   return (
@@ -26,15 +27,17 @@ export default async function VisitSentPage({ params, searchParams }: PageProps<
         <div className="sent-check" aria-hidden="true"><Check size={46} strokeWidth={3} /></div>
         <p className="eyebrow">Demande envoyée</p>
         <h1>Ta visite est en route.</h1>
-        <p className="sent-lead">Nous vérifions le créneau avec le logement. Tu recevras la confirmation dans Mon logement.</p>
+        <p className="sent-lead">Nous choisissons la date finale parmi tes disponibilités. Tu recevras la confirmation dans Mon logement.</p>
 
         <section className="sent-listing" aria-label="Récapitulatif">
           <span className="listing-summary-photo" role="img" aria-label={photo?.alt ?? listing.title}
             style={{ backgroundImage: `url('${photo?.url ?? "/images/listings/studio-thumb.jpg"}')`, backgroundPosition: photo?.position }} />
           <div>
             <strong>{listing.title}</strong>
-            {date && <span>{formatVisitDate(date)}</span>}
-            {slot && <span>Créneau préféré : {formatSlot(slot)}</span>}
+            {count > 1
+              ? <span>{count} disponibilités envoyées{date ? `, à partir du ${formatVisitDate(date)}` : ""}</span>
+              : date && <span>{formatVisitDate(date)}</span>}
+            {count === 1 && slot && <span>Créneau : {formatSlot(slot)}</span>}
           </div>
         </section>
 

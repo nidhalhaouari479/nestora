@@ -2,7 +2,7 @@ import Link from "next/link";
 import { AppShell } from "@/shared/presentation/components/AppShell";
 import { BottomNav } from "@/shared/presentation/components/BottomNav";
 import { getSelectedUniversityFromCookie } from "@/features/onboarding/application/selected-university";
-import { getHomeListings } from "@/features/listings/infrastructure/listings-repository";
+import { getHomeListings, type HomeSection } from "@/features/listings/infrastructure/listings-repository";
 import { HomeGreeting } from "@/features/listings/presentation/HomeGreeting";
 import { SearchBar } from "@/features/listings/presentation/SearchBar";
 import { StickyDiscoverHeader } from "@/features/listings/presentation/StickyDiscoverHeader";
@@ -20,10 +20,46 @@ const QUICK_FILTERS = [
   { label: "Studio", href: "/search?type=s0", tone: "light" },
 ];
 
+// "Voir tout" link for the built-in highlights; items added in the backoffice have none.
+const SEE_ALL: Record<string, string> = {
+  near_campus: "/search?near=1",
+  september: "/search?month=8",
+  foyer: "/search?type=private_foyer",
+};
+
+function HighlightSection({ section, universityName }: { section: HomeSection; universityName: string }) {
+  const titleId = `highlight-${section.code}-title`;
+  const seeAll = SEE_ALL[section.code];
+  // The campus section stays visible (with an empty state); the others only when they have listings.
+  if (section.code !== "near_campus" && section.listings.length === 0) return null;
+
+  return (
+    <section className="home-section" aria-labelledby={titleId}>
+      <div className={`section-heading ${section.code === "near_campus" ? "large" : ""}`}>
+        <h2 id={titleId}>{section.name}</h2>
+        {seeAll && <Link href={seeAll}>Voir tout</Link>}
+      </div>
+      {section.code === "near_campus" ? (
+        section.listings[0]
+          ? <ListingCardLarge listing={section.listings[0]} />
+          : <p className="empty-state">Aucun logement publié autour de {universityName} pour le moment.</p>
+      ) : section.code === "foyer" ? (
+        section.listings.map((listing) => <FoyerCard key={listing.id} listing={listing} />)
+      ) : (
+        <div className="carousel">
+          {section.listings.map((listing) => <ListingCardCompact key={listing.id} listing={listing} />)}
+        </div>
+      )}
+    </section>
+  );
+}
+
 export default async function HomePage() {
   const university = await getSelectedUniversityFromCookie();
   const home = await getHomeListings(university.id);
-  const featured = home.nearCampus[0];
+  // "Selon ton style de vie" sits after the first two highlight sections.
+  const before = home.sections.slice(0, 2);
+  const after = home.sections.slice(2);
 
   return (
     <AppShell>
@@ -46,27 +82,7 @@ export default async function HomePage() {
           ))}
         </nav>
 
-        <section className="home-section" aria-labelledby="near-title">
-          <div className="section-heading large">
-            <h2 id="near-title">À deux pas du campus</h2>
-            <Link href="/search?near=1">Voir tout</Link>
-          </div>
-          {featured
-            ? <ListingCardLarge listing={featured} />
-            : <p className="empty-state">Aucun logement publié autour de {university.shortName} pour le moment.</p>}
-        </section>
-
-        {home.september.length > 0 && (
-          <section className="home-section" aria-labelledby="september-title">
-            <div className="section-heading">
-              <h2 id="september-title">Disponibles en septembre</h2>
-              <Link href="/search?month=8">Voir tout</Link>
-            </div>
-            <div className="carousel">
-              {home.september.map((listing) => <ListingCardCompact key={listing.id} listing={listing} />)}
-            </div>
-          </section>
-        )}
+        {before.map((section) => <HighlightSection key={section.code} section={section} universityName={university.shortName} />)}
 
         <section className="home-section" aria-labelledby="lifestyle-title">
           <div className="section-heading">
@@ -81,15 +97,7 @@ export default async function HomePage() {
           </div>
         </section>
 
-        {home.foyers.length > 0 && (
-          <section className="home-section" aria-labelledby="foyer-title">
-            <div className="section-heading">
-              <h2 id="foyer-title">Foyers privés vérifiés</h2>
-              <Link href="/search?type=private_foyer">Voir tout</Link>
-            </div>
-            {home.foyers.map((listing) => <FoyerCard key={listing.id} listing={listing} />)}
-          </section>
-        )}
+        {after.map((section) => <HighlightSection key={section.code} section={section} universityName={university.shortName} />)}
       </main>
       <BottomNav />
     </AppShell>

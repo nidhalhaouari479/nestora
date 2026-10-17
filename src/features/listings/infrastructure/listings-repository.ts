@@ -1,7 +1,7 @@
 import { getSupabaseServerClient } from "@/shared/infrastructure/supabase/server-client";
-import type { Listing, ListingType, NearbyKind } from "../domain/listing";
+import type { FeatureKind, Listing, ListingFeature, ListingGender, ListingType } from "../domain/listing";
 import { matchesFilters, type ListingFilters } from "../application/listing-filters";
-import { DEMO_LISTINGS } from "./demo-listings";
+import { DEMO_HIGHLIGHTS, DEMO_LISTINGS } from "./demo-listings";
 
 type ListingRow = {
   id: string;
@@ -17,6 +17,8 @@ type ListingRow = {
   city: string;
   maps_url: string | null;
   price_tnd: number;
+  sale_price_tnd: number | null;
+  gender: ListingGender;
   service_included: boolean;
   walk_minutes: number;
   capacity: number;
@@ -29,22 +31,24 @@ type ListingRow = {
   photos_verified: boolean;
   landlord_verified: boolean;
   confidence_score: number | null;
-  is_furnished: boolean;
-  in_residence: boolean;
-  has_wifi: boolean;
-  has_ac: boolean;
-  has_heating: boolean;
-  has_desk: boolean;
-  deposit_label: string;
-  charges_label: string;
-  visits_label: string;
-  collections: string[];
   listing_photos: { url: string; alt: string; position: string; sort_order: number }[];
-  listing_nearby: { kind: NearbyKind; minutes: number }[];
+  listing_feature_values: { value: string; listing_features: FeatureRow | null }[];
 };
 
-const LISTING_SELECT = "*, listing_photos(url, alt, position, sort_order), listing_nearby(kind, minutes)";
-const NEARBY_ORDER: NearbyKind[] = ["university", "transport", "cafe", "supermarket"];
+type FeatureRow = { kind: FeatureKind; code: string; name: string; icon: string; sort_order: number; is_active: boolean };
+
+// Home sections driven by the "Mise en avant sur l'accueil" list.
+export type HomeSection = { code: string; name: string; listings: Listing[] };
+
+const LISTING_SELECT = "*, listing_photos(url, alt, position, sort_order), listing_feature_values(value, listing_features(kind, code, name, icon, sort_order, is_active))";
+
+// Hidden or deleted items are dropped; the rest follow the backoffice order.
+function toFeatures(rows: ListingRow["listing_feature_values"]): ListingFeature[] {
+  return rows
+    .flatMap(({ value, listing_features: feature }) => (feature?.is_active ? [{ ...feature, value }] : []))
+    .sort((a, b) => a.sort_order - b.sort_order || a.name.localeCompare(b.name, "fr"))
+    .map(({ kind, code, name, icon, value }) => ({ kind, code, name, icon, value }));
+}
 
 function toListing(row: ListingRow): Listing {
   return {
@@ -61,6 +65,8 @@ function toListing(row: ListingRow): Listing {
     city: row.city,
     mapsUrl: row.maps_url,
     priceTnd: row.price_tnd,
+    salePriceTnd: row.sale_price_tnd ?? null,
+    gender: row.gender ?? "all",
     serviceIncluded: row.service_included,
     walkMinutes: row.walk_minutes,
     capacity: row.capacity,
@@ -73,18 +79,8 @@ function toListing(row: ListingRow): Listing {
     photosVerified: row.photos_verified,
     landlordVerified: row.landlord_verified,
     confidenceScore: row.confidence_score,
-    isFurnished: row.is_furnished,
-    inResidence: row.in_residence,
-    hasWifi: row.has_wifi,
-    hasAc: row.has_ac,
-    hasHeating: row.has_heating,
-    hasDesk: row.has_desk,
-    depositLabel: row.deposit_label,
-    chargesLabel: row.charges_label,
-    visitsLabel: row.visits_label,
-    collections: row.collections,
     photos: [...row.listing_photos].sort((a, b) => a.sort_order - b.sort_order).map(({ url, alt, position }) => ({ url, alt, position })),
-    nearby: [...row.listing_nearby].sort((a, b) => NEARBY_ORDER.indexOf(a.kind) - NEARBY_ORDER.indexOf(b.kind)),
+    features: toFeatures(row.listing_feature_values ?? []),
   };
 }
 
@@ -112,15 +108,24 @@ function demoFor(universityId: string | null) {
   return universityId && universityId !== "tunis-el-manar" ? [] : DEMO_LISTINGS;
 }
 
+async function loadHighlights(): Promise<{ code: string; name: string }[]> {
+  const supabase = getSupabaseServerClient();
+  if (!supabase) return DEMO_HIGHLIGHTS;
+  const { data, error } = await supabase.from("listing_features").select("code, name")
+    .eq("kind", "highlight").eq("is_active", true).order("sort_order").order("name");
+  if (error) {
+    console.warn(`[listings] Supabase query failed, using demo highlights: ${error.message}`);
+    return DEMO_HIGHLIGHTS;
+  }
+  return data as { code: string; name: string }[];
+}
+
 export async function getHomeListings(universityId: string | null) {
-  const listings = await loadListings(universityId);
-  const pick = (collection: string) => listings.filter((listing) => listing.collections.includes(collection));
-  return {
-    total: listings.length,
-    nearCampus: pick("near_campus"),
-    september: pick("september"),
-    foyers: pick("foyer"),
-  };
+  const [listings, highlights] = await Promise.all([loadListings(universityId), loadHighlights()]);
+  const sections: HomeSection[] = highlights.map(({ code, name }) => ({
+    code, name, listings: listings.filter((listing) => listing.features.some((feature) => feature.kind === "highlight" && feature.code === code)),
+  }));
+  return { total: listings.length, sections };
 }
 
 export async function searchListings(universityId: string | null, filters: ListingFilters) {

@@ -1,4 +1,4 @@
-import type { Listing, ListingType } from "../domain/listing";
+import type { FeatureKind, Listing, ListingGender, ListingType } from "../domain/listing";
 
 export const LISTING_TYPE_LABELS: Record<ListingType, string> = {
   s0: "S+0",
@@ -8,6 +8,25 @@ export const LISTING_TYPE_LABELS: Record<ListingType, string> = {
   private_room: "Chambre privée",
   private_foyer: "Foyer privé",
 };
+
+export const GENDER_LABELS: Record<ListingGender, string> = {
+  girls: "Filles uniquement",
+  boys: "Garçons uniquement",
+  all: "Filles et garçons",
+};
+
+export function featuresOf(listing: Listing, kind: FeatureKind) {
+  return listing.features.filter((feature) => feature.kind === kind);
+}
+
+export function hasFeature(listing: Listing, kind: FeatureKind, code: string) {
+  return listing.features.some((feature) => feature.kind === kind && feature.code === code);
+}
+
+// Price the student pays: the sale price when one is set.
+export function currentPrice(listing: Listing) {
+  return listing.salePriceTnd ?? listing.priceTnd;
+}
 
 const MONTHS = ["janvier", "février", "mars", "avril", "mai", "juin", "juillet", "août", "septembre", "octobre", "novembre", "décembre"];
 

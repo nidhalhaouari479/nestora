@@ -10,4 +10,7 @@ export const env = {
   otpLength: readNumber(process.env.NEXT_PUBLIC_OTP_LENGTH, 6),
   otpExpirySeconds: readNumber(process.env.NEXT_PUBLIC_OTP_EXPIRY_SECONDS, 600),
   otpResendSeconds: readNumber(process.env.NEXT_PUBLIC_OTP_RESEND_SECONDS, 60),
+  // Company bank account shown in the Instant Booking popup (P21B). Empty = demo value.
+  companyRib: process.env.NEXT_PUBLIC_COMPANY_RIB ?? "",
+  companyBank: process.env.NEXT_PUBLIC_COMPANY_BANK ?? "",
 };

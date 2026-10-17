@@ -1,4 +1,4 @@
-import type { Listing } from "../domain/listing";
+import type { Listing, ListingFeature } from "../domain/listing";
 
 // Mirrors supabase/seed.sql. Used only when Supabase is not configured or unreachable,
 // so the storefront can still be previewed locally.
@@ -9,12 +9,38 @@ function nextSeptember() {
 }
 
 const today = new Date().toISOString().slice(0, 10);
-const nearby: Listing["nearby"] = [
-  { kind: "university", minutes: 8 },
-  { kind: "transport", minutes: 4 },
-  { kind: "cafe", minutes: 3 },
-  { kind: "supermarket", minutes: 5 },
+export const DEMO_HIGHLIGHTS = [
+  { code: "near_campus", name: "À deux pas du campus" },
+  { code: "september", name: "Disponibles en septembre" },
+  { code: "foyer", name: "Foyers privés vérifiés" },
 ];
+
+const NEARBY: ListingFeature[] = [
+  { kind: "nearby", code: "university", name: "Université", icon: "landmark", value: "8" },
+  { kind: "nearby", code: "transport", name: "Transport", icon: "bus", value: "4" },
+  { kind: "nearby", code: "cafe", name: "Café", icon: "coffee", value: "3" },
+  { kind: "nearby", code: "supermarket", name: "Supermarché", icon: "cart", value: "5" },
+];
+
+const CONDITIONS: ListingFeature[] = [
+  { kind: "condition", code: "deposit", name: "Dépôt de garantie", icon: "wallet", value: "1 mois de loyer" },
+  { kind: "condition", code: "charges", name: "Charges", icon: "receipt", value: "Eau et électricité non incluses" },
+  { kind: "condition", code: "visits", name: "Visites", icon: "calendar", value: "Sur demande et confirmation" },
+];
+
+const EQUIPMENT: Record<string, [string, string]> = {
+  furnished: ["Meublé", "sofa"], wifi: ["Wi-Fi", "wifi"], ac: ["Climatiseur", "ac"],
+  heating: ["Chauffage", "heater"], residence: ["Résidence", "building"], desk: ["Bureau", "desk"],
+};
+
+function features(equipment: string[], highlights: string[]): ListingFeature[] {
+  return [
+    ...NEARBY,
+    ...equipment.map((code): ListingFeature => ({ kind: "equipment", code, name: EQUIPMENT[code][0], icon: EQUIPMENT[code][1], value: "" })),
+    ...CONDITIONS,
+    ...highlights.map((code): ListingFeature => ({ kind: "highlight", code, name: DEMO_HIGHLIGHTS.find((item) => item.code === code)!.name, icon: "star", value: "" })),
+  ];
+}
 
 const base = {
   universityId: "tunis-el-manar",
@@ -26,12 +52,8 @@ const base = {
   addressVerified: true,
   photosVerified: true,
   landlordVerified: true,
-  hasWifi: true,
-  hasHeating: true,
-  depositLabel: "1 mois de loyer",
-  chargesLabel: "Eau et électricité non incluses",
-  visitsLabel: "Sur demande et confirmation",
-  nearby,
+  salePriceTnd: null,
+  gender: "all",
 } satisfies Partial<Listing>;
 
 export const DEMO_LISTINGS: Listing[] = [
@@ -53,11 +75,7 @@ export const DEMO_LISTINGS: Listing[] = [
     holdSlotsAvailable: 2,
     availableFrom: today,
     confidenceScore: 86,
-    isFurnished: true,
-    inResidence: true,
-    hasAc: true,
-    hasDesk: true,
-    collections: ["near_campus"],
+    features: features(["furnished", "wifi", "ac", "heating", "residence", "desk"], ["near_campus"]),
     photos: [
       { url: "/images/listings/studio-el-manar.jpg", alt: "Salon lumineux avec balcon", position: "center" },
       { url: "/images/listings/chambre-rommana.jpg", alt: "Chambre meublée", position: "center" },
@@ -81,11 +99,7 @@ export const DEMO_LISTINGS: Listing[] = [
     holdSlotsAvailable: 3,
     availableFrom: nextSeptember(),
     confidenceScore: 82,
-    isFurnished: true,
-    inResidence: false,
-    hasAc: true,
-    hasDesk: true,
-    collections: ["september"],
+    features: features(["furnished", "wifi", "ac", "heating", "desk"], ["september"]),
     photos: [{ url: "/images/listings/chambre-rommana.jpg", alt: "Chambre lumineuse", position: "left center" }],
   },
   {
@@ -98,6 +112,7 @@ export const DEMO_LISTINGS: Listing[] = [
     tagline: "Une colocation calme entre étudiantes.",
     description: "Une chambre meublée dans un appartement partagé, à quelques minutes du campus.",
     type: "private_room",
+    gender: "girls",
     neighborhood: "Rommana",
     priceTnd: 430,
     walkMinutes: 12,
@@ -106,11 +121,7 @@ export const DEMO_LISTINGS: Listing[] = [
     holdSlotsAvailable: 3,
     availableFrom: nextSeptember(),
     confidenceScore: 79,
-    isFurnished: true,
-    inResidence: false,
-    hasAc: false,
-    hasDesk: true,
-    collections: ["september"],
+    features: features(["furnished", "wifi", "heating", "desk"], ["september"]),
     photos: [{ url: "/images/listings/chambre-rommana.jpg", alt: "Chambre privée meublée", position: "center" }],
   },
   {
@@ -131,11 +142,7 @@ export const DEMO_LISTINGS: Listing[] = [
     holdSlotsAvailable: 3,
     availableFrom: today,
     confidenceScore: 88,
-    isFurnished: true,
-    inResidence: true,
-    hasAc: true,
-    hasDesk: true,
-    collections: ["foyer"],
+    features: features(["furnished", "wifi", "ac", "heating", "residence", "desk"], ["foyer"]),
     photos: [{ url: "/images/welcome.png", alt: "Étudiantes devant le foyer", position: "center 70%" }],
   },
   {
@@ -156,11 +163,7 @@ export const DEMO_LISTINGS: Listing[] = [
     holdSlotsAvailable: 3,
     availableFrom: nextSeptember(),
     confidenceScore: 84,
-    isFurnished: true,
-    inResidence: false,
-    hasAc: true,
-    hasDesk: true,
-    collections: ["near_campus"],
+    features: features(["furnished", "wifi", "ac", "heating", "desk"], ["near_campus"]),
     photos: [{ url: "/images/listings/studio-el-manar.jpg", alt: "Séjour avec balcon", position: "right center" }],
   },
   {
@@ -181,11 +184,7 @@ export const DEMO_LISTINGS: Listing[] = [
     holdSlotsAvailable: 3,
     availableFrom: today,
     confidenceScore: 80,
-    isFurnished: true,
-    inResidence: false,
-    hasAc: false,
-    hasDesk: true,
-    collections: ["near_campus", "september"],
+    features: features(["furnished", "wifi", "heating", "desk"], ["near_campus", "september"]),
     photos: [{ url: "/images/listings/studio-thumb.jpg", alt: "Studio calme", position: "center" }],
   },
 ];

@@ -1,5 +1,5 @@
 import type { Listing, ListingType } from "../domain/listing";
-import { LISTING_TYPE_LABELS, parseIsoDate, todayIso } from "./listing-format";
+import { LISTING_TYPE_LABELS, currentPrice, hasFeature, parseIsoDate, todayIso } from "./listing-format";
 
 export const BUDGET_MIN = 200;
 export const BUDGET_MAX = 1500;
@@ -83,8 +83,8 @@ export function availableByMonth(listing: Listing, month: number) {
 }
 
 export function matchesFilters(listing: Listing, filters: ListingFilters) {
-  if (filters.min !== null && listing.priceTnd < filters.min) return false;
-  if (filters.max !== null && listing.priceTnd > filters.max) return false;
+  if (filters.min !== null && currentPrice(listing) < filters.min) return false;
+  if (filters.max !== null && currentPrice(listing) > filters.max) return false;
   if (filters.month !== null && !availableByMonth(listing, filters.month)) return false;
   if (filters.types.length && !filters.types.includes(listing.type)) return false;
   if (filters.near && listing.walkMinutes > 15) return false;
@@ -92,11 +92,11 @@ export function matchesFilters(listing: Listing, filters: ListingFilters) {
 
   const comfort: Record<ComfortId, boolean> = {
     verified: listing.verifiedOnsite,
-    furnished: listing.isFurnished,
-    residence: listing.inResidence,
-    wifi: listing.hasWifi,
-    ac: listing.hasAc,
-    heating: listing.hasHeating,
+    furnished: hasFeature(listing, "equipment", "furnished"),
+    residence: hasFeature(listing, "equipment", "residence"),
+    wifi: hasFeature(listing, "equipment", "wifi"),
+    ac: hasFeature(listing, "equipment", "ac"),
+    heating: hasFeature(listing, "equipment", "heating"),
   };
   if (filters.comfort.some((id) => !comfort[id])) return false;
 

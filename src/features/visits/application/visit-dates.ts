@@ -21,21 +21,36 @@ function fromIso(iso: string) {
   return new Date(year, month - 1, day);
 }
 
-// Next 14 days starting tomorrow, Sundays excluded.
-export function upcomingVisitDays(count = 14) {
-  const days: { iso: string; day: string; date: string; month: string }[] = [];
-  const cursor = new Date();
-  while (days.length < count) {
-    cursor.setDate(cursor.getDate() + 1);
-    if (cursor.getDay() === 0) continue;
+export const VISIT_WINDOW_DAYS = 7;
+
+// Reference clock (Tunis): today's ISO date and minutes since midnight. Comes from the database,
+// never from the student's device, so a wrong device clock cannot offer days the database refuses.
+export type VisitClock = { today: string; minutes: number };
+
+// The 7 days the student can pick from: today and the next 6 days (same window as the database check).
+export function upcomingVisitDays(today: string, count = VISIT_WINDOW_DAYS) {
+  const days: { iso: string; day: string; date: string; month: string; isToday: boolean }[] = [];
+  const cursor = fromIso(today);
+  for (let index = 0; index < count; index += 1) {
     days.push({
       iso: toIso(cursor),
-      day: DAY_SHORT[cursor.getDay()],
+      day: index === 0 ? "AUJ." : DAY_SHORT[cursor.getDay()],
       date: String(cursor.getDate()).padStart(2, "0"),
       month: MONTH_SHORT[cursor.getMonth()],
+      isToday: index === 0,
     });
+    cursor.setDate(cursor.getDate() + 1);
   }
   return days;
+}
+
+// Today's slots that have already started can no longer be chosen.
+export function isSlotPast(iso: string, slotId: string, clock: VisitClock) {
+  if (iso !== clock.today) return false;
+  const slot = VISIT_SLOTS.find((item) => item.id === slotId);
+  if (!slot) return true;
+  const [hours, minutes] = slot.start.split(":").map(Number);
+  return hours * 60 + minutes <= clock.minutes;
 }
 
 // "Mardi 03 septembre"

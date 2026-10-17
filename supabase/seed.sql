@@ -64,6 +64,25 @@ select l.id, n.kind::public.nearby_kind, n.minutes
 from public.listings l
 cross join (values ('university', 8), ('transport', 4), ('cafe', 3), ('supermarket', 5)) as n(kind, minutes);
 
+-- Caractéristiques (catalogue créé par la migration listing_features).
+insert into public.listing_feature_values (listing_id, feature_id, value)
+select l.id, f.id, case f.kind
+    when 'nearby' then (select n.minutes::text from public.listing_nearby n where n.listing_id = l.id and n.kind::text = f.code)
+    when 'condition' then case f.code when 'deposit' then l.deposit_label when 'charges' then l.charges_label else l.visits_label end
+    else '' end
+from public.listings l
+join public.listing_features f on
+  (f.kind = 'nearby' and exists (select 1 from public.listing_nearby n where n.listing_id = l.id and n.kind::text = f.code))
+  or f.kind = 'condition'
+  or (f.kind = 'highlight' and f.code = any(l.collections))
+  or (f.kind = 'equipment' and (
+    (f.code = 'furnished' and l.is_furnished) or (f.code = 'wifi' and l.has_wifi) or (f.code = 'ac' and l.has_ac)
+    or (f.code = 'heating' and l.has_heating) or (f.code = 'residence' and l.in_residence) or (f.code = 'desk' and l.has_desk)))
+on conflict do nothing;
+
+update public.listings set gender = 'girls' where slug = 'chambre-privee-rommana';
+update public.listings set sale_price_tnd = 720 where slug = 's1-cite-olympique';
+
 -- Operations demo data for the Command Center ---------------------------------
 insert into public.rental_cases (reference, listing_id, student_name, status, needs_action, is_complete)
 select 'CAS-' || lpad(g::text, 4, '0'),

@@ -1,19 +1,13 @@
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
-import { ArrowUpRight, Bus, Camera, Check, Coffee, IdCard, Landmark, MapPin, ShoppingCart } from "lucide-react";
+import { ArrowUpRight, Camera, Check, IdCard, MapPin } from "lucide-react";
 import { AppShell } from "@/shared/presentation/components/AppShell";
 import { getListingBySlug } from "@/features/listings/infrastructure/listings-repository";
-import { LISTING_TYPE_LABELS, availableFromLong, availableFromShort, formatPrice, isAvailableNow, mapsUrl, occupancyLabel } from "@/features/listings/application/listing-format";
-import type { NearbyKind } from "@/features/listings/domain/listing";
+import { GENDER_LABELS, LISTING_TYPE_LABELS, availableFromLong, availableFromShort, featuresOf, isAvailableNow, mapsUrl, occupancyLabel } from "@/features/listings/application/listing-format";
+import { FeatureIcon } from "@/features/listings/presentation/FeatureIcon";
+import { Price } from "@/features/listings/presentation/Price";
 import { ListingGallery } from "@/features/listings/presentation/ListingGallery";
 import { ListingActionBar } from "@/features/listings/presentation/ListingActionBar";
-
-const NEARBY: Record<NearbyKind, { label: string; icon: typeof Landmark }> = {
-  university: { label: "Université", icon: Landmark },
-  transport: { label: "Transport", icon: Bus },
-  cafe: { label: "Café", icon: Coffee },
-  supermarket: { label: "Supermarché", icon: ShoppingCart },
-};
 
 export async function generateMetadata({ params }: PageProps<"/logements/[slug]">): Promise<Metadata> {
   const listing = await getListingBySlug((await params).slug);
@@ -31,21 +25,14 @@ export default async function ListingPage({ params }: PageProps<"/logements/[slu
     { ok: listing.landlordVerified, icon: IdCard, title: "Bailleur vérifié", text: "Identité ou autorisation" },
   ].filter((item) => item.ok);
 
-  const amenities = [
-    { ok: listing.isFurnished, title: "Meublé", text: "Prêt à habiter" },
-    { ok: listing.hasWifi, title: "Wi-Fi", text: "Connexion disponible" },
-    { ok: listing.hasAc, title: "Climatiseur", text: "Confort en été" },
-    { ok: listing.hasHeating, title: "Chauffage", text: "Pour les soirées fraîches" },
-    { ok: listing.inResidence, title: "Résidence", text: "Accès commun contrôlé" },
-    { ok: listing.hasDesk, title: "Bureau", text: "Coin de travail" },
-  ].filter((item) => item.ok);
+  const nearby = featuresOf(listing, "nearby");
+  const amenities = featuresOf(listing, "equipment");
 
   const conditions = [
-    ["Dépôt de garantie", listing.depositLabel],
-    ["Charges", listing.chargesLabel],
+    ...featuresOf(listing, "condition").map((feature) => [feature.name, feature.value]),
+    ["Pour qui", GENDER_LABELS[listing.gender]],
     ["Disponibilité", availableFromLong(listing)],
     ["Capacité", listing.capacity > 1 ? `${listing.capacity} étudiants` : "1 étudiant"],
-    ["Visites", listing.visitsLabel],
   ];
 
   return (
@@ -65,13 +52,14 @@ export default async function ListingPage({ params }: PageProps<"/logements/[slu
 
           <section className="price-card" aria-label="Prix">
             <div className="price-card-top">
-              <p><strong>{formatPrice(listing.priceTnd)}</strong><span>/ mois</span></p>
+              <p><Price listing={listing} /></p>
               <span className="status-pill">{isAvailableNow(listing) ? "Disponible" : availableFromShort(listing)}</span>
             </div>
             {listing.serviceIncluded && <p className="price-card-service">Service Nestora inclus</p>}
             <ul className="dot-list spaced">
               <li>{listing.walkMinutes} min à pied</li>
               <li>{occupancyLabel(listing)}</li>
+              <li>{GENDER_LABELS[listing.gender]}</li>
               <li>{availableFromShort(listing)}</li>
             </ul>
           </section>
@@ -90,14 +78,13 @@ export default async function ListingPage({ params }: PageProps<"/logements/[slu
             </section>
           )}
 
-          {listing.nearby.length > 0 && (
+          {nearby.length > 0 && (
             <section className="detail-section" aria-labelledby="nearby-title">
               <h2 id="nearby-title">Ta vie étudiante à proximité</h2>
               <ul className="nearby-card">
-                {listing.nearby.map(({ kind, minutes }) => {
-                  const { label, icon: Icon } = NEARBY[kind];
-                  return <li key={kind}><Icon size={17} aria-hidden="true" />{label} · {minutes} min</li>;
-                })}
+                {nearby.map((feature) => (
+                  <li key={feature.code}><FeatureIcon name={feature.icon} size={17} />{feature.name} · {feature.value} min</li>
+                ))}
               </ul>
             </section>
           )}
@@ -106,10 +93,10 @@ export default async function ListingPage({ params }: PageProps<"/logements/[slu
             <section className="detail-section" aria-labelledby="amenities-title">
               <h2 id="amenities-title">Tout ce qu’il faut au quotidien</h2>
               <ul className="amenity-grid">
-                {amenities.map((item) => (
-                  <li key={item.title}>
-                    <span className="amenity-check"><Check size={13} strokeWidth={3} aria-hidden="true" /></span>
-                    <span><strong>{item.title}</strong><small>{item.text}</small></span>
+                {amenities.map((feature) => (
+                  <li key={feature.code}>
+                    <span className="amenity-check"><FeatureIcon name={feature.icon} size={13} /></span>
+                    <span><strong>{feature.name}</strong>{feature.value && <small>{feature.value}</small>}</span>
                   </li>
                 ))}
               </ul>
@@ -137,7 +124,7 @@ export default async function ListingPage({ params }: PageProps<"/logements/[slu
           </section>
         </article>
 
-        <ListingActionBar slug={listing.slug} />
+        <ListingActionBar listingId={listing.id} slug={listing.slug} />
       </main>
     </AppShell>
   );
